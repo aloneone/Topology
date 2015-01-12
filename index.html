@@ -1,0 +1,108 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title></title>
+    <script type="text/javascript" src="js/jquery-2.1.3.min.js"></script>
+    <script type="text/javascript" src="js/twaver.js"></script>
+    <script type="text/javascript" src="js/demo.js"></script>
+    <script type="text/javascript" src="js/CLink.js"></script>
+    <script type="text/javascript">
+		////注册属性
+		twaver.SerializationSettings.setClientType("node_ip","string");
+		twaver.SerializationSettings.setClientType("used_bandwidth","string");
+        var box = new twaver.ElementBox();
+        var network = new twaver.network.Network(box);
+		//Ajax获取json数据
+		function M_GetTopologyInfo()
+		{
+ 		$.ajax({
+ 		   type: "Get",
+ 		   url: "http://192.168.100.139:8080/Demo/serverClient",		  
+ 		   contentType: "application/json",
+ 		   dataType: 'json',
+ 		   success: function(ret)
+ 		   {	
+ 				if(ret != '')
+ 				{
+					console.log(ret);
+					topologyinfo=ret;
+ 					console.log(topologyinfo);
+ 					init(topologyinfo);
+ 				}
+ 		   },
+ 		   error: function(XMLHttpRequest, textStatus, errorThrown)
+ 		   {
+ 			  alert("error"); 
+ 		   }
+ 		  }); 
+		}
+		
+		
+        function init(topologyinfo) {
+			//画布network形状设置
+				var networkDom = network.getView();
+				networkDom.style.width = "100%";
+				networkDom.style.height = "100%";
+				document.getElementById("main").appendChild(networkDom);
+				//demo.Util.registerImage("images/routerImage.png", network);
+				initNetwork();
+				//初始化容器box，同时传递获取的json数据:topologyinfo
+				initBox(topologyinfo);
+        } 
+		/*初始化画布network，
+		 *鼠标滑过显示数据
+		 */
+        function initNetwork() {
+            var view = network.getView();
+            document.body.appendChild(view);
+            network.adjustBounds({x: 0, y: 0, width: 1300, height: 600});
+			
+			network.getToolTip =  function (element) {
+				var Id = element.getId();
+				var name = element.getName();
+				var node_ip = element.getClient('node_ip');
+				var clientProperty = element.getClient('clientProperty');
+				return 'node_id:' + Id + '<br>' + 'name:' +  name +
+					'<br>' + 'node_ip:' + node_ip + '<br>';
+				}				
+			twaver.Styles.setStyle('label.color','#ec6c00');
+			twaver.Styles.setStyle('label2.color','#57ab9a');
+			twaver.Styles.setStyle('select.color','#ef8200');
+        }	
+		/*初始化容器box,
+		 *box用于解析网元数据Node和Link
+		 */
+		function initBox(topologyinfo) {
+		//获取并展现node
+		   console.log(topologyinfo.experiment_id);
+			for(var i=0; i<topologyinfo.nodes.length;i++){ 
+				var id =  topologyinfo.nodes[i].node_id;
+				var node = new twaver.Node(id);
+				var name = "node" + (i+1);
+				//设置节点node的属性：name
+				node.setName(name);
+				//设置json数组nodes的元素属性
+				node.setClient('node_ip',topologyinfo.nodes[i].node_ip);
+				//设置节点node的属性：位置
+				node.setLocation(300+i*(Math.floor(Math.random()*78)),150+i*(Math.floor(Math.random()*100)));
+				//向容器box中添加节点node
+				box.add(node);
+			}
+		//获取并展现link
+			for(var j=0; j<topologyinfo.links.length;j++){
+					//根据节点node的id获取json数组link的参数值
+					var from = box.getDataById(topologyinfo.links[j].node_id1);
+					var to = box.getDataById(topologyinfo.links[j].node_id2);
+					var link = new twaver.Link(from, to);
+					link.setClient('clientProperty',node);
+					link.setName("bandwidth:" + topologyinfo.links[j].used_bandwidth + "Mbps");
+					//添加连接link
+					box.add(link);
+				}
+		}
+    </script>
+</head>
+<body onLoad="M_GetTopologyInfo()">
+	<div id="main"></div>
+</body>
+</html>
